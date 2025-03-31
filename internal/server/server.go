@@ -2,7 +2,9 @@ package server
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
+	"os"
 	"welcomeProject/internal/handlers"
 	"welcomeProject/internal/repository"
 
@@ -41,7 +43,13 @@ func (s *Server) configureRouter() {
 
 func (s *Server) configureDB() {
 	var err error
-	connStr := "user=postgres password=postgres dbname=welcome_project sslmode=disable"
+	connStr := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=disable",
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_NAME"),
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_PORT"))
+
 	s.db, err = sql.Open("postgres", connStr)
 	if err != nil {
 		panic(err)
