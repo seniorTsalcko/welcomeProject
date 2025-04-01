@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
-	"os"
+	"welcomeProject/internal/config"
 	"welcomeProject/internal/handlers"
 	"welcomeProject/internal/repository"
 
@@ -17,12 +17,12 @@ type Server struct {
 	db     *sql.DB
 }
 
-func NewServer() *Server {
+func NewServer(dbConfig config.DBConfig) *Server {
 	s := &Server{
 		router: mux.NewRouter(),
 	}
 
-	s.configureDB()
+	s.configureDB(dbConfig)
 	s.configureRouter()
 
 	return s
@@ -41,14 +41,15 @@ func (s *Server) configureRouter() {
 	s.router.HandleFunc("/tasks/{id}/status", h.UpdateTaskStatusHandler).Methods("PATCH")
 }
 
-func (s *Server) configureDB() {
+func (s *Server) configureDB(dbConfig config.DBConfig) {
 	var err error
 	connStr := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=disable",
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_NAME"),
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_PORT"))
+		dbConfig.Username,
+		dbConfig.Password,
+		dbConfig.Database,
+		dbConfig.Host,
+		dbConfig.Port,
+	)
 
 	s.db, err = sql.Open("postgres", connStr)
 	if err != nil {
