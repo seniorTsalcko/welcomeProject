@@ -5,11 +5,20 @@ import (
 	"welcomeProject/internal/models"
 )
 
+type TaskRepository interface {
+	CreateTask(task *models.Task) error
+	GetAllTasks() ([]models.Task, error)
+	GetTaskByID(id int) (*models.Task, error)
+	UpdateTask(task *models.Task) error
+	DeleteTask(id int) error
+	UpdateTaskStatus(id int, status string) (*models.Task, error)
+}
+
 type Repository struct {
 	db *sql.DB
 }
 
-func NewRepository(db *sql.DB) *Repository {
+func NewRepository(db *sql.DB) TaskRepository {
 	return &Repository{db: db}
 }
 
