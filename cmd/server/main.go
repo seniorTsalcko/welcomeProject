@@ -3,11 +3,13 @@ package main
 import (
 	"log"
 	"os"
+	"welcomeProject/internal/config"
 	"welcomeProject/internal/server"
 )
 
 func main() {
-	s := server.NewServer()
+	dbConfig := config.LoadDBConfig()
+	s := server.NewServer(dbConfig)
 
 	port := os.Getenv("PORT")
 	if port == "" {
