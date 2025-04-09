@@ -12,10 +12,10 @@ import (
 )
 
 type Handlers struct {
-	repo *repository.Repository
+	repo repository.TaskRepository
 }
 
-func NewHandlers(repo *repository.Repository) *Handlers {
+func NewHandlers(repo repository.TaskRepository) *Handlers {
 	return &Handlers{repo: repo}
 }
 
