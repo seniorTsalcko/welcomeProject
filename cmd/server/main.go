@@ -9,7 +9,9 @@ import (
 
 func main() {
 	dbConfig := config.LoadDBConfig()
-	s := server.NewServer(dbConfig)
+	jwtConfig := config.LoadJWTConfig()
+
+	s := server.NewServer(dbConfig, jwtConfig)
 
 	port := os.Getenv("PORT")
 	if port == "" {

@@ -4,9 +4,11 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"welcomeProject/internal/auth"
 	"welcomeProject/internal/config"
 	"welcomeProject/internal/handlers"
 	"welcomeProject/internal/repository"
+	"welcomeProject/middleware"
 
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
@@ -17,28 +19,39 @@ type Server struct {
 	db     *sql.DB
 }
 
-func NewServer(dbConfig config.DBConfig) *Server {
+func NewServer(dbConfig config.DBConfig, jwtConfig config.JWTConfig) *Server {
 	s := &Server{
 		router: mux.NewRouter(),
 	}
 
 	s.configureDB(dbConfig)
-	s.configureRouter()
+	s.configureRouter(jwtConfig.Secret)
 
 	return s
 }
 
-func (s *Server) configureRouter() {
+func (s *Server) configureRouter(jwtSecret string) {
 	repo := repository.NewRepository(s.db)
-	h := handlers.NewHandlers(repo)
+	authRepo := auth.NewAuthRepository(s.db)
 
-	s.router.HandleFunc("/hello", h.HelloHandler).Methods("GET")
-	s.router.HandleFunc("/tasks", h.CreateTaskHandler).Methods("POST")
-	s.router.HandleFunc("/tasks", h.GetTasksHandler).Methods("GET")
-	s.router.HandleFunc("/tasks/{id}", h.GetTaskHandler).Methods("GET")
-	s.router.HandleFunc("/tasks/{id}", h.UpdateTaskHandler).Methods("PUT")
-	s.router.HandleFunc("/tasks/{id}", h.DeleteTaskHandler).Methods("DELETE")
-	s.router.HandleFunc("/tasks/{id}/status", h.UpdateTaskStatusHandler).Methods("PATCH")
+	authService := auth.NewAuthService(authRepo, jwtSecret)
+
+	taskHandlers := handlers.NewHandlers(repo)
+	authHandlers := auth.NewAuthHandlers(authService)
+
+	s.router.HandleFunc("/hello", taskHandlers.HelloHandler).Methods("GET")
+	s.router.HandleFunc("/signup", authHandlers.SignUp).Methods("POST")
+	s.router.HandleFunc("/login", authHandlers.Login).Methods("POST")
+
+	protected := s.router.PathPrefix("/api/").Subrouter()
+	protected.Use(middleware.JWTAuth(jwtSecret))
+
+	protected.HandleFunc("/tasks", taskHandlers.CreateTaskHandler).Methods("POST")
+	protected.HandleFunc("/tasks", taskHandlers.GetTasksHandler).Methods("GET")
+	protected.HandleFunc("/tasks/{id}", taskHandlers.GetTaskHandler).Methods("GET")
+	protected.HandleFunc("/tasks/{id}", taskHandlers.UpdateTaskHandler).Methods("PUT")
+	protected.HandleFunc("/tasks/{id}", taskHandlers.DeleteTaskHandler).Methods("DELETE")
+	protected.HandleFunc("/tasks/{id}/status", taskHandlers.UpdateTaskStatusHandler).Methods("PATCH")
 }
 
 func (s *Server) configureDB(dbConfig config.DBConfig) {
@@ -61,6 +74,14 @@ func (s *Server) configureDB(dbConfig config.DBConfig) {
 	}
 
 	_, err = s.db.Exec(`
+		CREATE TABLE IF NOT EXISTS users (
+		    id SERIAL PRIMARY KEY,
+		    name TEXT NOT NULL,
+		    email TEXT NOT NULL UNIQUE,
+		    login TEXT NOT NULL UNIQUE,
+		    password TEXT NOT NULL
+		);
+
 		CREATE TABLE IF NOT EXISTS tasks (
 			id SERIAL PRIMARY KEY,
 			description TEXT NOT NULL,
@@ -68,7 +89,9 @@ func (s *Server) configureDB(dbConfig config.DBConfig) {
 			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			CHECK (status IN ('new', 'in progress', 'done'))
-		)`)
+		)
+
+`)
 	if err != nil {
 		panic(err)
 	}
