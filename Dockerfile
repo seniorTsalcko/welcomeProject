@@ -11,6 +11,6 @@ FROM alpine:latest
 
 
 WORKDIR /app
-COPY --from=builder /taskList ./
+COPY --from=builder /welcome-app ./
 
-CMD ["./taskList"]
+CMD ["./welcome-app"]

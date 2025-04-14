@@ -3,6 +3,7 @@ package auth
 import (
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
+	"log"
 	"time"
 )
 
@@ -25,5 +26,9 @@ func (s *AuthService) GenerateToken(user *User) (string, error) {
 }
 
 func (s *AuthService) CheckPassword(user *User, password string) error {
-	return bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
+	if err != nil {
+		log.Printf("Password mismatch: hash=%s, input=%s", user.Password, password)
+	}
+	return err
 }

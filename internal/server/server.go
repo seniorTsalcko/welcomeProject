@@ -1,9 +1,12 @@
 package server
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
+	"time"
 	"welcomeProject/internal/auth"
 	"welcomeProject/internal/config"
 	"welcomeProject/internal/handlers"
@@ -55,6 +58,7 @@ func (s *Server) configureRouter(jwtSecret string) {
 }
 
 func (s *Server) configureDB(dbConfig config.DBConfig) {
+	log.Printf("Connecting to DB with config: %+v", dbConfig)
 	var err error
 	connStr := fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=disable",
 		dbConfig.Username,
@@ -69,28 +73,30 @@ func (s *Server) configureDB(dbConfig config.DBConfig) {
 		panic(err)
 	}
 
-	if err = s.db.Ping(); err != nil {
-		panic(err)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := s.db.PingContext(ctx); err != nil {
+		log.Fatalf("Failed to connect to DB: %v", err)
 	}
 
 	_, err = s.db.Exec(`
-		CREATE TABLE IF NOT EXISTS users (
-		    id SERIAL PRIMARY KEY,
-		    name TEXT NOT NULL,
-		    email TEXT NOT NULL UNIQUE,
-		    login TEXT NOT NULL UNIQUE,
-		    password TEXT NOT NULL
-		);
+    CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE,
+        login TEXT NOT NULL UNIQUE,
+        password TEXT NOT NULL
+    );
 
-		CREATE TABLE IF NOT EXISTS tasks (
-			id SERIAL PRIMARY KEY,
-			description TEXT NOT NULL,
-			status VARCHAR(20) NOT NULL DEFAULT 'new',
-			created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-			CHECK (status IN ('new', 'in progress', 'done'))
-		)
-
+    CREATE TABLE IF NOT EXISTS tasks (
+        id SERIAL PRIMARY KEY,
+        description TEXT NOT NULL,
+        status VARCHAR(20) NOT NULL DEFAULT 'new',
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK (status IN ('new', 'in progress', 'done'))
+    )
 `)
 	if err != nil {
 		panic(err)
