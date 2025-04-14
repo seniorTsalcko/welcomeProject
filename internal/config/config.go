@@ -10,12 +10,24 @@ type DBConfig struct {
 	Password string
 }
 
+type JWTConfig struct {
+	Secret string
+}
+
 func LoadDBConfig() DBConfig {
 	return DBConfig{
 		Host:     os.Getenv("DB_HOST"),
 		Port:     os.Getenv("DB_PORT"),
-		Database: os.Getenv("DB_DATABASE"),
-		Username: os.Getenv("DB_USERNAME"),
+		Database: os.Getenv("DB_NAME"),
+		Username: os.Getenv("DB_USER"),
 		Password: os.Getenv("DB_PASSWORD"),
 	}
+}
+
+func LoadJWTConfig() JWTConfig {
+	secret := os.Getenv("JWT_SECRET")
+	if secret == "" {
+		secret = os.Getenv("JWT_SECRET")
+	}
+	return JWTConfig{Secret: secret}
 }

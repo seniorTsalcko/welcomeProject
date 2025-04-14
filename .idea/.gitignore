@@ -8,3 +8,6 @@
 /dataSources.local.xml
 # JetBrains IDE
 .idea/
+# Environment files
+.env
+.env*.local
